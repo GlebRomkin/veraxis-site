@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Veraxis — веб-студия</title>
+<meta name="description" content="Veraxis — веб-студия. Разрабатываем сайты: от каталогов и визиток до сложных сервисов с личным кабинетом и оплатой.">
+<style>
+  :root{
+    --bg:#07120f;
+    --bg2:#0d1f1b;
+    --bg3:#0a1a17;
+    --line:#1e3a34;
+    --accent:#5fe6c8;
+    --accent2:#5fbfe6;
+    --accent3:#e65f9e;
+    --accent-dim:#2d6558;
+    --text:#eef7f4;
+    --muted:#8fada4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+    width:100%;
+    cursor:default;
+  }
+  a{color:inherit;text-decoration:none}
+  .container{max-width:1160px;margin:0 auto;padding:0 24px}
+  img,svg{max-width:100%}
+  ::selection{background:var(--accent);color:#04120e}
+
+  /* фон: градиентная сетка + зерно */
+  .bg-glow{
+    position:fixed;inset:0;z-index:-3;
+    background:
+      radial-gradient(900px 620px at 8% 0%, rgba(95,230,200,.16), transparent 60%),
+      radial-gradient(800px 700px at 95% 15%, rgba(95,191,230,.12), transparent 60%),
+      radial-gradient(700px 600px at 50% 100%, rgba(230,95,158,.08), transparent 60%),
+      var(--bg);
+  }
+  .bg-grain{
+    position:fixed;inset:0;z-index:-1;opacity:.05;mix-blend-mode:overlay;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .bg-grid{
+    position:fixed;inset:0;z-index:-2;opacity:.25;
+    background-image:
+      linear-gradient(rgba(95,230,200,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(95,230,200,.06) 1px, transparent 1px);
+    background-size:52px 52px;
+    mask-image:radial-gradient(ellipse 90% 70% at 50% 0%, #000 40%, transparent 92%);
+  }
+
+  .float-shape{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0;opacity:.55}
+  .fs1{width:380px;height:380px;background:radial-gradient(circle,rgba(95,230,200,.4),transparent 70%);top:-80px;left:-110px;animation:drift1 16s ease-in-out infinite}
+  .fs2{width:300px;height:300px;background:radial-gradient(circle,rgba(230,95,158,.28),transparent 70%);bottom:-40px;right:-90px;animation:drift2 20s ease-in-out infinite}
+  .fs3{width:260px;height:260px;background:radial-gradient(circle,rgba(95,191,230,.28),transparent 70%);top:30%;right:8%;animation:drift1 24s ease-in-out infinite}
+  @keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,35px)}}
+  @keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-35px,-45px)}}
+
+  /* header */
+  header{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(16px);background:rgba(7,18,15,.55);border-bottom:1px solid transparent;transition:border-color .3s}
+  header.scrolled{border-bottom-color:var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:68px}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand svg{width:26px;height:26px;flex:none}
+  .brand b{font-size:18px;letter-spacing:.3px;white-space:nowrap}
+  .brand sub{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-left:2px;white-space:nowrap}
+  nav.links{display:flex;gap:28px}
+  nav.links a{font-size:14px;color:var(--muted);transition:color .25s;position:relative}
+  nav.links a::after{content:'';position:absolute;left:0;bottom:-4px;width:0;height:1px;background:var(--accent);transition:width .3s}
+  nav.links a:hover{color:var(--accent)}
+  nav.links a:hover::after{width:100%}
+
+  /* бегущая строка */
+  .marquee{
+    position:relative;z-index:2;overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    background:linear-gradient(90deg, rgba(95,230,200,.05), rgba(95,191,230,.05));
+    padding:14px 0;
+  }
+  .marquee-track{display:flex;width:max-content;animation:scroll-left 28s linear infinite}
+  .marquee-track span{
+    display:inline-flex;align-items:center;gap:14px;font-size:13px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--muted);padding:0 28px;white-space:nowrap;font-weight:600;
+  }
+  .marquee-track span::after{content:'✦';color:var(--accent);opacity:.7}
+  @keyframes scroll-left{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* hero */
+  .hero{min-height:calc(100svh - 49px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:90px 20px 80px;position:relative}
+  .hero-badge{position:relative;z-index:1;display:inline-flex;align-items:center;gap:9px;padding:8px 18px;border-radius:100px;border:1px solid var(--accent-dim);background:rgba(95,230,200,.06);font-size:13px;color:var(--muted);margin-bottom:28px;animation:fadeUp .8s ease both}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(95,230,200,.6);animation:dotpulse 2s infinite}
+  @keyframes dotpulse{0%{box-shadow:0 0 0 0 rgba(95,230,200,.55)}70%{box-shadow:0 0 0 9px rgba(95,230,200,0)}100%{box-shadow:0 0 0 0 rgba(95,230,200,0)}}
+
+  .hero-logo-wrap{position:relative;z-index:1;margin-bottom:34px}
+  .hero-logo-glow{position:absolute;inset:-32px;border-radius:50%;background:conic-gradient(from 0deg, var(--accent), var(--accent2), var(--accent3), var(--accent));filter:blur(26px);z-index:-1;opacity:.5;animation:spin-slow 8s linear infinite}
+  @keyframes spin-slow{to{transform:rotate(360deg)}}
+  .hero-logo{width:108px;height:108px;display:block;animation:float 6s ease-in-out infinite}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+
+  .hero h1{position:relative;z-index:1;font-size:clamp(50px,11vw,116px);font-weight:800;letter-spacing:-3px;line-height:.95;background:linear-gradient(120deg,#fff 0%, var(--accent) 45%, var(--accent2) 75%, var(--accent3) 100%);background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:fadeUp .8s ease .05s both, shine 6s linear infinite}
+  @keyframes shine{to{background-position:200% center}}
+  .hero .studios{display:block;font-size:clamp(12px,2vw,15px);letter-spacing:8px;text-transform:uppercase;color:var(--muted);margin-top:16px;font-weight:600}
+  .hero p.tagline{position:relative;z-index:1;margin-top:28px;font-size:clamp(18px,2.6vw,23px);color:var(--muted);max-width:640px;line-height:1.6;animation:fadeUp .8s ease .1s both}
+  .chips{position:relative;z-index:1;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:26px;max-width:620px;animation:fadeUp .8s ease .15s both}
+  .chip{font-size:13px;color:var(--text);padding:8px 16px;border-radius:100px;border:1px solid var(--line);background:rgba(255,255,255,.02);transition:border-color .3s,transform .3s}
+  .chip:hover{border-color:var(--accent-dim);transform:translateY(-2px)}
+  .hero .cta{position:relative;z-index:1;margin-top:40px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;animation:fadeUp .8s ease .2s both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+  .btn{padding:15px 30px;border-radius:100px;font-size:14px;font-weight:600;border:1px solid var(--accent-dim);transition:all .3s;display:inline-flex;align-items:center;gap:8px;cursor:pointer;position:relative;overflow:hidden}
+  .btn.primary{background:var(--accent);color:#04140f;border-color:var(--accent)}
+  .btn.primary:hover{box-shadow:0 0 36px rgba(95,230,200,.5);transform:translateY(-2px)}
+  .btn.ghost{color:var(--text)}
+  .btn.ghost:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+
+  .scroll-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);color:var(--muted);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:8px;animation:pulse 2.4s ease-in-out infinite;letter-spacing:1px;text-transform:uppercase;z-index:1}
+  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+  .scroll-hint .line{width:1px;height:34px;background:linear-gradient(var(--accent),transparent)}
+
+  section{padding:120px 0;position:relative}
+  .section-head{margin-bottom:56px;text-align:center}
+  .eyebrow{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:14px;display:inline-flex;align-items:center;gap:8px}
+  .eyebrow::before{content:'';width:20px;height:1px;background:var(--accent)}
+  .section-head h2{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.5px}
+  .section-head p{color:var(--muted);margin-top:14px;font-size:16px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6}
+
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.2,.7,.2,1), transform .8s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:translateY(0)}
+
+  /* бенто про нас */
+  .about-bento{display:grid;grid-template-columns:1.3fr .7fr;grid-template-rows:auto auto;gap:20px}
+  .bento-card{background:var(--bg2);border:1px solid var(--line);border-radius:24px;padding:36px;position:relative;overflow:hidden;transition:border-color .3s,transform .3s}
+  .bento-card:hover{border-color:var(--accent-dim);transform:translateY(-4px)}
+  .bento-main{grid-row:1/3}
+  .bento-main p{color:var(--muted);font-size:17px;line-height:1.8}
+  .bento-main p+p{margin-top:16px}
+  .bento-main h3{font-size:clamp(24px,3.5vw,32px);font-weight:800;margin-bottom:18px;letter-spacing:-.5px}
+  .bento-visual{display:flex;align-items:center;justify-content:center;min-height:170px}
+  .bento-visual svg{width:60px;height:60px;animation:spin 20s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .bento-visual::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 50%, rgba(95,230,200,.14), transparent 65%);pointer-events:none}
+  .bento-stat{display:flex;flex-direction:column;justify-content:center;gap:4px}
+  .bento-stat .num{font-size:36px;font-weight:800;color:var(--accent);letter-spacing:-1px}
+  .bento-stat .lbl{color:var(--muted);font-size:13px}
+
+  /* team */
+  .team-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:800px;margin:0 auto}
+  .tilt-card{perspective:900px}
+  .card{
+    background:var(--bg2);border:1px solid var(--line);border-radius:24px;padding:40px 28px 34px;
+    text-align:center;transition:border-color .35s, box-shadow .35s, transform .15s ease-out;
+    scroll-margin-top:100px;position:relative;transform-style:preserve-3d;
+  }
+  .card .badge-num{position:absolute;top:18px;left:22px;font-size:12px;color:var(--accent-dim);font-weight:700;letter-spacing:1px}
+  .card:hover{border-color:var(--accent-dim);box-shadow:0 24px 60px -24px rgba(0,0,0,.6)}
+  .card.highlight{border-color:var(--accent);box-shadow:0 0 0 3px rgba(95,230,200,.25), 0 20px 50px -20px rgba(0,0,0,.6)}
+  .avatar{width:88px;height:88px;border-radius:50%;margin:0 auto 20px;background:conic-gradient(from 120deg, var(--accent-dim), var(--bg), var(--accent-dim));display:flex;align-items:center;justify-content:center;font-size:27px;font-weight:800;color:var(--accent);border:1px solid var(--line)}
+  .card h3{font-size:19px;font-weight:700}
+  .card .role{color:var(--muted);font-size:13px;margin-top:4px;letter-spacing:.5px}
+  .card .tg{margin-top:18px;display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--accent);padding:9px 18px;border-radius:100px;border:1px solid var(--accent-dim);transition:all .25s}
+  .card .tg:hover{background:var(--accent);color:#04140f}
+
+  /* projects */
+  .projects-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+  .project{background:var(--bg2);border:1px solid var(--line);border-radius:22px;padding:32px;transition:transform .35s, border-color .35s;position:relative;overflow:hidden;display:block}
+  .project::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));transform:scaleX(0);transform-origin:left;transition:transform .4s}
+  .project:hover::before{transform:scaleX(1)}
+  .project:hover{transform:translateY(-6px);border-color:var(--accent-dim)}
+  .project .tag{display:inline-block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);background:rgba(95,230,200,.1);padding:5px 12px;border-radius:100px;margin-bottom:16px}
+  .project h3{font-size:19px;font-weight:700;margin-bottom:10px}
+  .project p{color:var(--muted);font-size:14px;line-height:1.6}
+  .project .go{margin-top:18px;display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--accent);font-weight:600}
+  .project .go svg{width:14px;height:14px;transition:transform .25s}
+  .project:hover .go svg{transform:translateX(4px)}
+  .project.empty{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;border-style:dashed;text-align:center;min-height:190px}
+
+  /* contacts */
+  .contacts-wrap{background:var(--bg2);border:1px solid var(--line);border-radius:28px;padding:70px 32px;text-align:center;position:relative;overflow:hidden}
+  .contacts-wrap::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(600px 340px at 50% 0%, rgba(95,230,200,.14), transparent 70%)}
+  .contacts-inner{position:relative;z-index:1}
+  .contacts-wrap h2{font-size:clamp(28px,5vw,40px);font-weight:800;margin-bottom:14px}
+  .contacts-wrap p{color:var(--muted);max-width:460px;margin:0 auto 32px;line-height:1.6}
+  .tg-buttons{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+
+  footer{padding:40px 0;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  footer .container{display:flex;flex-direction:column;align-items:center;gap:8px}
+  footer .brand{justify-content:center}
+
+  @media(max-width:900px){
+    .about-bento{grid-template-columns:1fr}
+    .bento-main{grid-row:auto}
+  }
+  @media(max-width:760px){
+    .team-grid{grid-template-columns:1fr;max-width:380px}
+    nav.links{display:none}
+    section{padding:80px 0}
+    .marquee-track{animation-duration:18s}
+  }
+  @media(max-width:480px){
+    .hero-logo{width:88px;height:88px}
+    .btn{padding:13px 22px;font-size:13px}
+    .contacts-wrap{padding:44px 20px}
+    .card{padding:32px 20px}
+    .bento-card{padding:26px}
+    .brand b{font-size:16px}
+  }
+  @media(max-width:360px){
+    .brand sub{display:none}
+    .chips{gap:8px}
+    .chip{font-size:12px;padding:6px 12px}
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+<div class="bg-grid"></div>
+<div class="bg-grain"></div>
+
+<header id="header">
+  <div class="container nav">
+    <div class="brand">
+      <svg viewBox="0 0 80 80" aria-hidden="true"><rect x="2" y="2" width="76" height="76" rx="20" fill="#0b1c22" stroke="#2d6570"/><path d="M14 18l26 30 26-30" fill="none" stroke="#5fe6c8" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><path d="M22 32l18 22 18-22" fill="none" stroke="#5fe6c8" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" opacity=".6"/><path d="M30 46l10 14 10-14" fill="none" stroke="#5fe6c8" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" opacity=".3"/></svg>
+      <b>Veraxis</b><sub>studios</sub>
+    </div>
+    <nav class="links">
+      <a href="#about">О нас</a>
+      <a href="#team">Команда</a>
+      <a href="#projects">Проекты</a>
+      <a href="#contacts">Контакты</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="float-shape fs1"></div>
+  <div class="float-shape fs2"></div>
+  <div class="float-shape fs3"></div>
+
+  <div class="hero-badge"><span class="dot"></span> Открыты для новых проектов</div>
+
+  <div class="hero-logo-wrap">
+    <div class="hero-logo-glow"></div>
+    <svg class="hero-logo" viewBox="0 0 80 80" aria-hidden="true"><rect x="2" y="2" width="76" height="76" rx="20" fill="#0b1c22" stroke="#2d6570"/><path d="M14 18l26 30 26-30" fill="none" stroke="#5fe6c8" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><path d="M22 32l18 22 18-22" fill="none" stroke="#5fe6c8" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" opacity=".6"/><path d="M30 46l10 14 10-14" fill="none" stroke="#5fe6c8" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" opacity=".3"/></svg>
+  </div>
+
+  <h1>Veraxis<span class="studios">web studio</span></h1>
+  <p class="tagline">От идеи до сайта, который впечатляет с первой секунды.</p>
+
+  <div class="chips">
+    <span class="chip">Каталоги</span>
+    <span class="chip">Личные кабинеты</span>
+    <span class="chip">Приём оплаты</span>
+    <span class="chip">SEO</span>
+  </div>
+
+  <div class="cta">
+    <a href="#projects" class="btn primary">Наши проекты</a>
+    <a href="#contacts" class="btn ghost">Связаться</a>
+  </div>
+
+  <div class="scroll-hint"><span>листайте</span><span class="line"></span></div>
+</section>
+
+<div class="marquee">
+  <div class="marquee-track">
+    <span>Сайты-каталоги</span><span>Личные кабинеты</span><span>Приём оплаты</span><span>SEO-продвижение</span><span>Дизайн</span><span>Поддержка</span>
+    <span>Сайты-каталоги</span><span>Личные кабинеты</span><span>Приём оплаты</span><span>SEO-продвижение</span><span>Дизайн</span><span>Поддержка</span>
+  </div>
+</div>
+
+<section id="about">
+  <div class="container reveal">
+    <div class="section-head">
+      <div class="eyebrow">О студии</div>
+      <h2>Как мы работаем</h2>
+    </div>
+    <div class="about-bento">
+      <div class="bento-card bento-main">
+        <h3>Делаем сайты, которыми приятно пользоваться</h3>
+        <p>Veraxis — небольшая веб-студия. Берём проект от идеи до запуска: дизайн, вёрстка, серверная часть, хостинг и дальнейшая поддержка.</p>
+        <p>Работаем аккуратно и не спеша разбираемся в задаче заказчика, поэтому получаются сайты, которые решают реальные задачи бизнеса — а не просто красиво выглядят.</p>
+      </div>
+      <div class="bento-card bento-visual">
+        <svg viewBox="0 0 80 80" aria-hidden="true"><rect x="2" y="2" width="76" height="76" rx="20" fill="none" stroke="#2d6570" stroke-width="1.5"/><path d="M14 18l26 30 26-30" fill="none" stroke="#5fe6c8" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M22 32l18 22 18-22" fill="none" stroke="#5fe6c8" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity=".6"/><path d="M30 46l10 14 10-14" fill="none" stroke="#5fe6c8" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity=".3"/></svg>
+      </div>
+      <div class="bento-card bento-stat">
+        <div class="num">1</div>
+        <div class="lbl">запущенный проект</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="team">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow">Команда</div>
+      <h2>Основатели</h2>
+    </div>
+    <div class="team-grid">
+      <div class="tilt-card reveal">
+        <div class="card" id="founder-vlad">
+          <span class="badge-num">01</span>
+          <div class="avatar">УВ</div>
+          <h3>Ушкин Владислав</h3>
+          <div class="role">Основатель</div>
+          <a class="tg" href="https://t.me/ushik23" target="_blank" rel="noopener">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.14-3.05-2 1.92c-.23.23-.42.42-.82.42z"/></svg>
+            @ushik23
+          </a>
+        </div>
+      </div>
+      <div class="tilt-card reveal">
+        <div class="card" id="founder-gleb">
+          <span class="badge-num">02</span>
+          <div class="avatar">ЮГ</div>
+          <h3>Юрьев Глеб</h3>
+          <div class="role">Основатель</div>
+          <a class="tg" href="https://t.me/sqzmeqs" target="_blank" rel="noopener">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.14-3.05-2 1.92c-.23.23-.42.42-.82.42z"/></svg>
+            @sqzmeqs
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="projects">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow">Портфолио</div>
+      <h2>Проекты</h2>
+      <p>Сайты, которые мы уже сделали и запустили.</p>
+    </div>
+    <div class="projects-grid" id="projects-grid">
+      <a class="project reveal" href="https://craftlabs-site.onrender.com" target="_blank" rel="noopener">
+        <span class="tag">Каталог</span>
+        <h3>CraftLabs</h3>
+        <p>Каталог ложементов для организации хранения инструмента: карточки товаров, личный кабинет клиента, приём заказов.</p>
+        <span class="go">Смотреть сайт
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        </span>
+      </a>
+      <div class="project empty reveal">Следующий проект появится здесь</div>
+    </div>
+  </div>
+</section>
+
+<section id="contacts">
+  <div class="container">
+    <div class="contacts-wrap reveal">
+      <div class="contacts-inner">
+        <h2>Есть задача — обсудим</h2>
+        <p>Пишите в Telegram — так быстрее и удобнее всего.</p>
+        <div class="tg-buttons">
+          <a class="btn primary" href="#founder-vlad" data-scroll-to="founder-vlad">Написать Владиславу</a>
+          <a class="btn ghost" href="#founder-gleb" data-scroll-to="founder-gleb">Написать Глебу</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="brand">
+      <svg viewBox="0 0 80 80" width="16" height="16" aria-hidden="true"><rect x="2" y="2" width="76" height="76" rx="20" fill="#0b1c22" stroke="#2d6570"/><path d="M14 18l26 30 26-30" fill="none" stroke="#5fe6c8" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><path d="M22 32l18 22 18-22" fill="none" stroke="#5fe6c8" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" opacity=".6"/><path d="M30 46l10 14 10-14" fill="none" stroke="#5fe6c8" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" opacity=".3"/></svg>
+      <b>Veraxis</b>
+    </div>
+    <div>© 2026 Veraxis. Все права защищены.</div>
+  </div>
+</footer>
+
+<script>
+  const header = document.getElementById('header');
+  window.addEventListener('scroll', () => header.classList.toggle('scrolled', window.scrollY > 20));
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  document.querySelectorAll('[data-scroll-to]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.getElementById(btn.dataset.scrollTo);
+      if (!target) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('highlight');
+      setTimeout(() => target.classList.remove('highlight'), 2200);
+    });
+  });
+
+  // лёгкий 3D-наклон карточек команды при наведении
+  document.querySelectorAll('.tilt-card .card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      card.style.transform = `rotateY(${x * 8}deg) rotateX(${-y * 8}deg) translateY(-4px)`;
+    });
+    card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+  });
+</script>
+
+</body>
+</html>
