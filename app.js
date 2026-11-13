@@ -12,8 +12,17 @@
   let lastTime = 0;
   const clamp = value => Math.max(0,Math.min(1,value));
   const scenes = [...document.querySelectorAll('.hero, .project-card, .manifesto, .about, .contact')]
-    .map(element => ({element,value:0,target:0}));
+    .map(element => ({element,value:0,target:0,
+      screen:element.querySelector('.screen'),flask:element.querySelector('.flask'),
+      star:element.querySelector('.about-star'),heading:element.querySelector('.contact-title h2'),
+      lines:element.classList.contains('manifesto') ? [...element.children].filter(el=>el.tagName==='SPAN') : []
+    }));
+  document.body.dataset.motionVersion = 'scroll-3';
   let revealObserver;
+  function listenToMedia(query, callback) {
+    if (query.addEventListener) query.addEventListener('change',callback);
+    else query.addListener(callback);
+  }
   function setMenu(open, focus = false) {
     toggle.setAttribute('aria-expanded', String(open));
     toggle.setAttribute('aria-label', open ? 'Закрыть меню' : 'Открыть меню');
@@ -28,12 +37,12 @@
     if (e.key === 'Escape') { setMenu(false,true); return; }
     if (e.key === 'Tab') {
       const items = [toggle, ...menu.querySelectorAll('a')];
-      if (e.shiftKey && document.activeElement === items[0]) {e.preventDefault(); items.at(-1).focus();}
-      else if (!e.shiftKey && document.activeElement === items.at(-1)) {e.preventDefault(); toggle.focus();}
+      if (e.shiftKey && document.activeElement === items[0]) {e.preventDefault(); items[items.length-1].focus();}
+      else if (!e.shiftKey && document.activeElement === items[items.length-1]) {e.preventDefault(); toggle.focus();}
     }
   });
   document.addEventListener('pointerdown', e => { if (!menu.hidden && !e.target.closest('.header')) setMenu(false); });
-  wide.addEventListener('change', () => { if (wide.matches) setMenu(false); schedule(); });
+  listenToMedia(wide, () => { if (wide.matches) setMenu(false); schedule(); });
   // Small text groups enter separately, rather than fading a whole section at once.
   document.querySelectorAll('.manifesto p, .section-label, .contact-bottom, footer').forEach(el => el.classList.add('reveal'));
   document.querySelectorAll('.project-note, .about-text').forEach(group => {
@@ -53,12 +62,16 @@
           entry.target.classList.add('visible');
           revealObserver.unobserve(entry.target);
         }
-      }), {threshold:.12,rootMargin:'0px 0px -5% 0px'});
+      }), {threshold:.1,rootMargin:'0px 0px -8% 0px'});
       document.querySelectorAll('.reveal:not(.visible)').forEach(el => revealObserver.observe(el));
     }
     if (reduced.matches) {
       art.style.removeProperty('transform');
-      scenes.forEach(scene => scene.element.style.removeProperty('--scene'));
+      scenes.forEach(scene => {
+        scene.element.style.removeProperty('--scene');
+        [scene.screen,scene.flask,scene.star,scene.heading,...scene.lines].filter(Boolean)
+          .forEach(el=>el.style.removeProperty('transform'));
+      });
     }
     schedule();
   }
@@ -72,7 +85,7 @@
       scenes.forEach((scene,index) => {
         const rect = rectangles[index];
         scene.target = scene.element === hero
-          ? clamp(-rect.top / Math.max(1,rect.height))
+          ? clamp(scrollY / Math.max(1,rect.height*.85))
           : clamp((innerHeight-rect.top)/(innerHeight+rect.height));
       });
       progress.style.transform = `scaleX(${range > 0 ? clamp(scrollY/range) : 0})`;
@@ -87,11 +100,23 @@
       const delta = scene.target-scene.value;
       scene.value = Math.abs(delta)<.0008 ? scene.target : scene.value+delta*blend;
       if (Math.abs(scene.target-scene.value)>=.0008) settling = true;
-      scene.element.style.setProperty('--scene',scene.value.toFixed(4));
+      const amount = scene.value;
+      const offset = .5-amount;
       if (scene.element===hero) {
-        const amount = scene.value;
-        art.style.transform = `translate3d(0,${(amount*(wide.matches?52:26)).toFixed(2)}px,0) rotate(${(-amount*1.8).toFixed(3)}deg) scale(${(1+amount*.025).toFixed(4)})`;
+        art.style.transform = `translate3d(0,${(amount*(wide.matches?76:52)).toFixed(2)}px,0) rotate(${(-amount*2.4).toFixed(3)}deg) scale(${(1+amount*.035).toFixed(4)})`;
       }
+      // Use one ordinary transform rather than independent translate/rotate/scale
+      // properties. This also works on mobile browsers with older CSS support.
+      if (scene.screen) {
+        const ghost = scene.element.classList.contains('ghost-card');
+        const base = ghost && !wide.matches ? -10 : -9;
+        const yaw = ghost ? (wide.matches?-7:-6) : (wide.matches?-5:0);
+        scene.screen.style.transform = `translate3d(0,${(offset*(wide.matches?78:64)).toFixed(2)}px,0) rotate(${(base+offset*1.6).toFixed(3)}deg) rotateY(${yaw}deg) scale(${(1+amount*.025).toFixed(4)})`;
+      }
+      if (scene.flask) scene.flask.style.transform = `translate3d(0,${(offset*(wide.matches?94:78)).toFixed(2)}px,0) rotate(${(7+offset*4).toFixed(3)}deg)`;
+      if (scene.star) scene.star.style.transform = `rotate(${(amount*35).toFixed(2)}deg)`;
+      if (scene.heading) scene.heading.style.transform = `translate3d(0,${(offset*24).toFixed(2)}px,0)`;
+      scene.lines.forEach(line=>{line.style.transform=`scaleX(${(.45+amount*.55).toFixed(4)})`;});
     });
     // Stop as soon as the easing settles. Touch scrolling uses the same path.
     if (settling) frame=requestAnimationFrame(update);
@@ -100,12 +125,13 @@
   function schedule() {dirty=true; if (!frame) frame=requestAnimationFrame(update);}
   addEventListener('scroll',schedule,{passive:true});
   addEventListener('resize',schedule,{passive:true});
+  if (window.visualViewport) window.visualViewport.addEventListener('resize',schedule,{passive:true});
   addEventListener('pageshow',schedule);
   document.addEventListener('visibilitychange',schedule);
   document.fonts?.ready.then(schedule);
   document.querySelectorAll('img').forEach(img => {if (!img.complete) img.addEventListener('load',schedule,{once:true});});
   // Keyboard users should never land on invisible links during an entrance.
   document.addEventListener('focusin', e => e.target.closest('.reveal')?.classList.add('visible'));
-  reduced.addEventListener('change',configureMotion);
+  listenToMedia(reduced,configureMotion);
   configureMotion();
 })();
