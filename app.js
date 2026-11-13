@@ -1,26 +1,17 @@
 (() => {
   'use strict';
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const wide = matchMedia('(min-width: 761px)');
   const toggle = document.querySelector('.menu-toggle');
   const menu = document.querySelector('.mobile-menu');
   const progress = document.querySelector('.page-progress');
   const art = document.querySelector('.hero-art');
   const hero = document.querySelector('.hero');
-  const wide = matchMedia('(min-width: 761px)');
-  let frame = 0;
-  let dirty = true;
-  let lastTime = 0;
-  const clamp = value => Math.max(0,Math.min(1,value));
-  const scenes = [...document.querySelectorAll('.hero, .project-card, .manifesto, .about, .contact')]
-    .map(element => ({element,value:0,target:0,
-      screen:element.querySelector('.screen'),flask:element.querySelector('.flask'),
-      star:element.querySelector('.about-star'),heading:element.querySelector('.contact-title h2'),
-      lines:element.classList.contains('manifesto') ? [...element.children].filter(el=>el.tagName==='SPAN') : []
-    }));
-  document.body.dataset.motionVersion = 'scroll-3';
-  let revealObserver;
+  const clamp = value => Math.max(0, Math.min(1, value));
+  document.body.dataset.motionVersion = 'motion-4';
+
   function listenToMedia(query, callback) {
-    if (query.addEventListener) query.addEventListener('change',callback);
+    if (query.addEventListener) query.addEventListener('change', callback);
     else query.addListener(callback);
   }
   function setMenu(open, focus = false) {
@@ -32,106 +23,106 @@
   }
   toggle.addEventListener('click', () => setMenu(menu.hidden));
   menu.querySelectorAll('a').forEach(link => link.addEventListener('click', () => setMenu(false)));
-  document.addEventListener('keydown', e => {
+  document.addEventListener('keydown', event => {
     if (menu.hidden) return;
-    if (e.key === 'Escape') { setMenu(false,true); return; }
-    if (e.key === 'Tab') {
+    if (event.key === 'Escape') { setMenu(false, true); return; }
+    if (event.key === 'Tab') {
       const items = [toggle, ...menu.querySelectorAll('a')];
-      if (e.shiftKey && document.activeElement === items[0]) {e.preventDefault(); items[items.length-1].focus();}
-      else if (!e.shiftKey && document.activeElement === items[items.length-1]) {e.preventDefault(); toggle.focus();}
+      if (event.shiftKey && document.activeElement === items[0]) {
+        event.preventDefault(); items[items.length - 1].focus();
+      } else if (!event.shiftKey && document.activeElement === items[items.length - 1]) {
+        event.preventDefault(); toggle.focus();
+      }
     }
   });
-  document.addEventListener('pointerdown', e => { if (!menu.hidden && !e.target.closest('.header')) setMenu(false); });
-  listenToMedia(wide, () => { if (wide.matches) setMenu(false); schedule(); });
-  // Small text groups enter separately, rather than fading a whole section at once.
-  document.querySelectorAll('.manifesto p, .section-label, .contact-bottom, footer').forEach(el => el.classList.add('reveal'));
-  document.querySelectorAll('.project-note, .about-text').forEach(group => {
-    group.classList.remove('reveal');
-    [...group.children].forEach((el,index) => {
-      el.classList.add('reveal');
-      el.style.setProperty('--reveal-delay', `${Math.min(index*70,210)}ms`);
-    });
+  document.addEventListener('pointerdown', event => {
+    if (!menu.hidden && !event.target.closest('.header')) setMenu(false);
   });
-  function configureMotion() {
-    revealObserver?.disconnect();
-    document.body.classList.toggle('scroll-motion',!reduced.matches);
-    document.body.classList.toggle('motion',!reduced.matches && 'IntersectionObserver' in window);
-    if (!reduced.matches && 'IntersectionObserver' in window) {
-      revealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          revealObserver.unobserve(entry.target);
-        }
-      }), {threshold:.1,rootMargin:'0px 0px -8% 0px'});
-      document.querySelectorAll('.reveal:not(.visible)').forEach(el => revealObserver.observe(el));
-    }
-    if (reduced.matches) {
-      art.style.removeProperty('transform');
-      scenes.forEach(scene => {
-        scene.element.style.removeProperty('--scene');
-        [scene.screen,scene.flask,scene.star,scene.heading,...scene.lines].filter(Boolean)
-          .forEach(el=>el.style.removeProperty('transform'));
-      });
-    }
-    schedule();
+
+  document.querySelectorAll('.manifesto, .section-label, .contact-bottom').forEach(element => element.classList.add('reveal'));
+  const entries = [...document.querySelectorAll('.reveal')].map(element => ({
+    element, card:element.classList.contains('project-card'), top:0, value:1, forced:false
+  }));
+  let frame = 0;
+  let lastTime = 0;
+  let needsLayout = true;
+  let initialized = false;
+  let viewportHeight = innerHeight;
+  let maxScroll = 1;
+  let heroHeight = 1;
+  let artValue = 0;
+
+  // These layout coordinates exclude transforms, keeping trigger points stable.
+  function documentTop(element) {
+    let top = 0;
+    for (let current = element; current; current = current.offsetParent) top += current.offsetTop;
+    return top;
+  }
+  function measure() {
+    viewportHeight = document.documentElement.clientHeight;
+    maxScroll = Math.max(0, document.documentElement.scrollHeight - viewportHeight);
+    heroHeight = hero.offsetHeight;
+    entries.forEach(entry => { entry.top = documentTop(entry.element); });
+    needsLayout = false;
+  }
+  function entrance(entry, y) {
+    if (entry.forced || reduced.matches) return 1;
+    const start = entry.top - viewportHeight * .94;
+    // The last section must finish before the bottom of the document.
+    const finish = Math.min(maxScroll, entry.top - viewportHeight * .5);
+    const value = clamp((y - start) / Math.max(1, finish - start));
+    return value * value * (3 - 2 * value);
   }
   function update(time) {
     frame = 0;
-    if (document.hidden) {lastTime=0; return;}
-    if (dirty) {
-      // Read layout together, then write transforms: no layout changes while scrolling.
-      const range = document.documentElement.scrollHeight - innerHeight;
-      const rectangles = scenes.map(scene => scene.element.getBoundingClientRect());
-      scenes.forEach((scene,index) => {
-        const rect = rectangles[index];
-        scene.target = scene.element === hero
-          ? clamp(scrollY / Math.max(1,rect.height*.85))
-          : clamp((innerHeight-rect.top)/(innerHeight+rect.height));
-      });
-      progress.style.transform = `scaleX(${range > 0 ? clamp(scrollY/range) : 0})`;
-      dirty = false;
-    }
-    if (reduced.matches) {lastTime=0; return;}
-    const dt = lastTime ? Math.min(time-lastTime,50) : 16;
-    lastTime = time;
-    const blend = 1-Math.exp(-dt/95);
+    if (document.hidden) { lastTime = 0; return; }
+    if (needsLayout) measure();
+    const y = Math.max(0, scrollY);
+    progress.style.transform = 'scaleX(' + (maxScroll ? clamp(y / maxScroll) : 0) + ')';
+    const blend = initialized ? 1 - Math.exp(-Math.min(time - (lastTime || time - 16), 50) / 70) : 1;
     let settling = false;
-    scenes.forEach(scene => {
-      const delta = scene.target-scene.value;
-      scene.value = Math.abs(delta)<.0008 ? scene.target : scene.value+delta*blend;
-      if (Math.abs(scene.target-scene.value)>=.0008) settling = true;
-      const amount = scene.value;
-      const offset = .5-amount;
-      if (scene.element===hero) {
-        art.style.transform = `translate3d(0,${(amount*(wide.matches?76:52)).toFixed(2)}px,0) rotate(${(-amount*2.4).toFixed(3)}deg) scale(${(1+amount*.035).toFixed(4)})`;
-      }
-      // Use one ordinary transform rather than independent translate/rotate/scale
-      // properties. This also works on mobile browsers with older CSS support.
-      if (scene.screen) {
-        const ghost = scene.element.classList.contains('ghost-card');
-        const base = ghost && !wide.matches ? -10 : -9;
-        const yaw = ghost ? (wide.matches?-7:-6) : (wide.matches?-5:0);
-        scene.screen.style.transform = `translate3d(0,${(offset*(wide.matches?78:64)).toFixed(2)}px,0) rotate(${(base+offset*1.6).toFixed(3)}deg) rotateY(${yaw}deg) scale(${(1+amount*.025).toFixed(4)})`;
-      }
-      if (scene.flask) scene.flask.style.transform = `translate3d(0,${(offset*(wide.matches?94:78)).toFixed(2)}px,0) rotate(${(7+offset*4).toFixed(3)}deg)`;
-      if (scene.star) scene.star.style.transform = `rotate(${(amount*35).toFixed(2)}deg)`;
-      if (scene.heading) scene.heading.style.transform = `translate3d(0,${(offset*24).toFixed(2)}px,0)`;
-      scene.lines.forEach(line=>{line.style.transform=`scaleX(${(.45+amount*.55).toFixed(4)})`;});
+    entries.forEach(entry => {
+      const target = entrance(entry, y);
+      const difference = target - entry.value;
+      entry.value = reduced.matches || Math.abs(difference) < .001 ? target : entry.value + difference * blend;
+      if (Math.abs(target - entry.value) >= .001) settling = true;
+      const remaining = 1 - entry.value;
+      entry.element.style.setProperty('--enter-opacity', (1 - remaining * (entry.card ? .82 : .9)).toFixed(4));
+      entry.element.style.setProperty('--enter-y', (remaining * (entry.card ? 56 : 30)).toFixed(2) + 'px');
+      entry.element.style.setProperty('--enter-scale', (1 - remaining * (entry.card ? .045 : 0)).toFixed(4));
     });
-    // Stop as soon as the easing settles. Touch scrolling uses the same path.
-    if (settling) frame=requestAnimationFrame(update);
-    else lastTime=0;
+    const artTarget = reduced.matches ? 0 : clamp(y / Math.max(1, heroHeight));
+    artValue = Math.abs(artTarget - artValue) < .001 ? artTarget : artValue + (artTarget - artValue) * blend;
+    if (Math.abs(artTarget - artValue) >= .001) settling = true;
+    art.style.transform = reduced.matches ? '' : 'translate3d(0,' + (artValue * 38).toFixed(2) + 'px,0) rotate(' + (-artValue * 3).toFixed(3) + 'deg)';
+    // The parent handles scrolling; CSS owns the image float and card hover.
+    document.body.classList.toggle('wave-active', !reduced.matches && y < heroHeight + 100);
+    document.body.classList.toggle('motion', !reduced.matches);
+    initialized = true;
+    lastTime = time;
+    if (settling) frame = requestAnimationFrame(update);
+    else lastTime = 0;
   }
-  function schedule() {dirty=true; if (!frame) frame=requestAnimationFrame(update);}
-  addEventListener('scroll',schedule,{passive:true});
-  addEventListener('resize',schedule,{passive:true});
-  if (window.visualViewport) window.visualViewport.addEventListener('resize',schedule,{passive:true});
-  addEventListener('pageshow',schedule);
-  document.addEventListener('visibilitychange',schedule);
-  document.fonts?.ready.then(schedule);
-  document.querySelectorAll('img').forEach(img => {if (!img.complete) img.addEventListener('load',schedule,{once:true});});
-  // Keyboard users should never land on invisible links during an entrance.
-  document.addEventListener('focusin', e => e.target.closest('.reveal')?.classList.add('visible'));
-  listenToMedia(reduced,configureMotion);
-  configureMotion();
+  function schedule() { if (!frame) frame = requestAnimationFrame(update); }
+  function layoutChanged() { needsLayout = true; schedule(); }
+  addEventListener('scroll', schedule, {passive:true});
+  addEventListener('resize', layoutChanged, {passive:true});
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', layoutChanged, {passive:true});
+  addEventListener('pageshow', layoutChanged);
+  document.addEventListener('visibilitychange', () => {
+    document.body.classList.toggle('page-hidden', document.hidden);
+    schedule();
+  });
+  document.fonts?.ready.then(layoutChanged);
+  document.querySelectorAll('img').forEach(img => {
+    if (!img.complete) img.addEventListener('load', layoutChanged, {once:true});
+  });
+  if ('ResizeObserver' in window) new ResizeObserver(layoutChanged).observe(document.querySelector('.page-wrap'));
+  document.addEventListener('focusin', event => {
+    const entry = entries.find(item => item.element.contains(event.target));
+    if (entry) { entry.forced = true; entry.value = 1; schedule(); }
+  });
+  listenToMedia(wide, () => { if (wide.matches) setMenu(false); layoutChanged(); });
+  listenToMedia(reduced, () => { initialized = false; schedule(); });
+  schedule();
 })();
